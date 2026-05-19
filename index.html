@@ -285,6 +285,27 @@
       opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
     .toast.show{opacity:1}
 
+    /* PDF PASSWORD CARD */
+    .pwd-card{background:var(--card);border:1px solid #f59e0b44;border-radius:16px;
+      padding:28px 22px;margin-bottom:22px;text-align:center}
+    .pwd-lock{font-size:2.4rem;margin-bottom:10px}
+    .pwd-title{font-size:1rem;font-weight:700;color:var(--t1);margin-bottom:4px}
+    .pwd-sub{font-size:.82rem;color:var(--t2);margin-bottom:18px}
+    .pwd-row{display:flex;gap:10px;max-width:420px;margin:0 auto 16px;flex-wrap:wrap}
+    .pwd-row input{flex:1;min-width:160px;background:#0f172a;border:1px solid var(--border);
+      border-radius:10px;padding:10px 14px;color:var(--t1);font-size:.9rem;outline:none;
+      transition:border-color .2s;text-align:center;letter-spacing:.1em}
+    .pwd-row input:focus{border-color:#f59e0b}
+    .btn-unlock{padding:10px 20px;border-radius:10px;border:none;cursor:pointer;
+      background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#000;
+      font-size:.88rem;font-weight:700;white-space:nowrap}
+    .pwd-hints{display:flex;align-items:center;gap:7px;justify-content:center;flex-wrap:wrap}
+    .pwd-hint-lbl{font-size:.72rem;color:var(--t2)}
+    .pwd-chip{padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:600;
+      background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25);
+      cursor:pointer;transition:background .15s}
+    .pwd-chip:hover{background:rgba(245,158,11,.25)}
+
     @media(max-width:480px){.hdr h1{font-size:1.7rem}.card-amt{font-size:1.6rem}}
   </style>
 </head>
@@ -424,6 +445,24 @@
     </div>
   </div>
 
+  <!-- PDF Password Card -->
+  <div class="pwd-card" id="pwdCard" style="display:none">
+    <div class="pwd-lock">🔒</div>
+    <div class="pwd-title">PDF Password Required</div>
+    <div class="pwd-sub">Your bank statement is password-protected</div>
+    <div class="pwd-row">
+      <input type="password" id="pdfPwd" placeholder="Enter PDF password" autocomplete="off" />
+      <button class="btn-unlock" id="unlockBtn">Unlock &amp; Parse</button>
+    </div>
+    <div class="pwd-hints">
+      <span class="pwd-hint-lbl">Common formats:</span>
+      <span class="pwd-chip">DDMMYYYY</span>
+      <span class="pwd-chip">PAN number</span>
+      <span class="pwd-chip">Mobile number</span>
+      <span class="pwd-chip">Account number</span>
+    </div>
+  </div>
+
   <div class="proc-card" id="procCard" style="display:none">
     <div class="spin"></div>
     <div class="proc-ttl" id="procTtl">Parsing...</div>
@@ -513,6 +552,7 @@ let eYear=now.getFullYear(), eMonth=now.getMonth(); // expenses tab period
 let view='monthly'; // monthly | yearly | expenses | analyse
 const mData={};
 let txns=[], aFilter='All';
+let currentFile=null; // store file ref for password retry
 
 /* ═══════════════════════════════════════════════════
    SEED DATA
@@ -762,30 +802,68 @@ dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
 dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
 fi.addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
 
-async function handleFile(file){
+async function handleFile(file, password=''){
+  currentFile=file;
   showProc('Reading file…',file.name);
   try{
-    let text=file.name.toLowerCase().endsWith('.pdf')?await pdfText(file):await file.text();
+    let text=file.name.toLowerCase().endsWith('.pdf')?await pdfText(file,password):await file.text();
+    hideProc();
+    document.getElementById('pwdCard').style.display='none';
     showProc('Parsing transactions…','Detecting format');
     const parsed=parseTxns(text);
-    if(!parsed.length){hideProc();toast('⚠ No transactions found. Try a CSV export.');return;}
+    if(!parsed.length){hideProc();document.getElementById('uploadCard').style.display='block';toast('⚠ No transactions found. Try a CSV export.');return;}
     txns=parsed;
     const key=localStorage.getItem(GK)||'';
     if(key){showProc('AI categorising…',`${parsed.length} transactions → Gemini`);await aiCat(txns,key);}
     else{txns.forEach(t=>{t.category=ruleCat(t.description);});}
     hideProc();renderResults();
-  }catch(err){hideProc();toast('❌ '+err.message);}
+  }catch(err){
+    hideProc();
+    // Check if it's a password error from PDF.js
+    const msg=err.message||'';
+    if(msg.includes('password')||msg.includes('Password')||err.name==='PasswordException'||(err.code&&(err.code===1||err.code===2))){
+      // Show password card
+      document.getElementById('uploadCard').style.display='none';
+      document.getElementById('pwdCard').style.display='block';
+      document.getElementById('pdfPwd').value='';
+      document.getElementById('pdfPwd').focus();
+      if(password) toast('❌ Wrong password, try again');
+    } else {
+      document.getElementById('uploadCard').style.display='block';
+      toast('❌ '+msg);
+    }
+  }
 }
 function showProc(t,s){document.getElementById('uploadCard').style.display='none';document.getElementById('analyseResults').style.display='none';document.getElementById('procCard').style.display='block';document.getElementById('procTtl').textContent=t;document.getElementById('procSub').textContent=s;}
 function hideProc(){document.getElementById('procCard').style.display='none';}
 
-async function pdfText(file){
+async function pdfText(file, password=''){
   if(typeof pdfjsLib==='undefined')throw new Error('PDF.js not loaded');
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  const ab=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+  const ab=await file.arrayBuffer();
+  const loadOpts={data:ab};
+  if(password)loadOpts.password=password;
+  const pdf=await pdfjsLib.getDocument(loadOpts).promise;
   let t='';for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i);const c=await p.getTextContent();t+=c.items.map(x=>x.str).join(' ')+'\n';}
   return t;
 }
+
+// Unlock button — retry with password
+document.getElementById('unlockBtn').onclick=()=>{
+  const pwd=document.getElementById('pdfPwd').value.trim();
+  if(!pwd){toast('⚠ Enter the PDF password');return;}
+  if(currentFile)handleFile(currentFile,pwd);
+};
+// Allow Enter key in password field
+document.getElementById('pdfPwd').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('unlockBtn').click();});
+// Password hint chips — click to fill
+document.querySelectorAll('.pwd-chip').forEach(chip=>{
+  chip.onclick=()=>{
+    document.getElementById('pdfPwd').value='';
+    document.getElementById('pdfPwd').placeholder='e.g. '+chip.textContent;
+    document.getElementById('pdfPwd').focus();
+  };
+});
 
 function parseTxns(text){
   const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);const txns=[];
