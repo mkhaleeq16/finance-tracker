@@ -1,7 +1,7 @@
 {
-  "name": "Monthly Finance Tracker",
-  "short_name": "Finance",
-  "description": "Track your monthly salary, expenses and savings",
+  "name": "Niyamah",
+  "short_name": "Niyamah",
+  "description": "Your personal finance companion",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
