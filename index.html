@@ -16,65 +16,110 @@
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     :root{
-      --green:#10b981;--red:#ef4444;--indigo:#6366f1;
-      --bg:#0f172a;--card:#1e293b;--border:#334155;
-      --t1:#f1f5f9;--t2:#94a3b8;--accent:#38bdf8
+      --green:#10b981;--emerald:#059669;--red:#ef4444;--indigo:#6366f1;
+      --gold:#d4a017;--gold-light:#f5c842;
+      --bg:#0a1628;--card:#112240;--border:#1e3a5f;
+      --t1:#f0f4f8;--t2:#8ba3c0;--accent:#10b981
     }
-    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;padding:20px 16px 90px}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;padding:20px 16px 90px;
+      background-image:radial-gradient(ellipse at 20% 0%,rgba(16,185,129,.08) 0%,transparent 60%),
+                       radial-gradient(ellipse at 80% 100%,rgba(212,160,23,.06) 0%,transparent 60%)}
+
+    /* ── KEYFRAMES ── */
+    @keyframes slideInUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes shimmerBar{0%{background-position:-200% 0}100%{background-position:200% 0}}
+    @keyframes pulseGlow{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.3)}50%{box-shadow:0 0 0 10px rgba(16,185,129,0)}}
+    @keyframes pulseGold{0%,100%{box-shadow:0 0 0 0 rgba(212,160,23,.4)}50%{box-shadow:0 0 0 12px rgba(212,160,23,0)}}
+    @keyframes shake{0%,100%{transform:rotate(0)}20%{transform:rotate(-8deg)}40%{transform:rotate(8deg)}60%{transform:rotate(-5deg)}80%{transform:rotate(5deg)}}
+    @keyframes bounceIn{0%{opacity:0;transform:scale(.7)}60%{transform:scale(1.08)}80%{transform:scale(.96)}100%{opacity:1;transform:scale(1)}}
+    @keyframes crescentSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    @keyframes dropBorder{0%,100%{border-color:var(--border)}50%{border-color:var(--emerald)}}
+    @keyframes goldShimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+    @keyframes tabSlide{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes floatUp{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+    @keyframes starTwinkle{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
 
     /* HEADER */
-    .hdr{text-align:center;margin-bottom:24px}
-    .hdr h1{font-size:2.2rem;font-weight:800;letter-spacing:-.03em;
-      background:linear-gradient(135deg,#38bdf8,#818cf8);
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-    .hdr p{color:var(--t2);margin-top:4px;font-size:.88rem}
+    .hdr{text-align:center;margin-bottom:28px;position:relative}
+    .hdr-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:4px}
+    .hdr-crescent{font-size:1.8rem;animation:floatUp 3s ease-in-out infinite}
+    .hdr-star{font-size:.9rem;animation:starTwinkle 2s ease-in-out infinite;margin-top:-8px}
+    .hdr h1{
+      font-size:2.4rem;font-weight:900;letter-spacing:-.04em;
+      background:linear-gradient(135deg,#10b981 0%,#34d399 40%,#d4a017 70%,#f5c842 100%);
+      background-size:200% auto;
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      animation:goldShimmer 4s linear infinite;
+    }
+    .hdr p{color:var(--t2);margin-top:4px;font-size:.88rem;letter-spacing:.04em}
+    .hdr-tagline{font-size:.72rem;color:var(--gold);opacity:.7;margin-top:2px;letter-spacing:.12em;text-transform:uppercase}
 
     /* TABS */
-    .tabs{display:flex;justify-content:center;margin-bottom:24px;flex-wrap:wrap}
-    .tab{padding:9px 18px;font-size:.85rem;font-weight:600;border:1px solid var(--border);
-      cursor:pointer;background:var(--card);color:var(--t2);transition:all .2s;white-space:nowrap}
+    .tabs{display:flex;justify-content:center;margin-bottom:28px;flex-wrap:wrap;gap:0}
+    .tab{padding:10px 20px;font-size:.85rem;font-weight:600;border:1px solid var(--border);
+      cursor:pointer;background:var(--card);color:var(--t2);transition:all .25s;white-space:nowrap;
+      position:relative;overflow:hidden}
+    .tab::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+      width:0;height:2px;background:var(--emerald);transition:width .3s}
+    .tab:hover::after{width:60%}
     .tab:first-child{border-radius:99px 0 0 99px;border-right:none}
     .tab:last-child{border-radius:0 99px 99px 0;border-left:none}
     .tab:not(:first-child):not(:last-child){border-right:none}
-    .tab.on{background:linear-gradient(135deg,#6366f1,#38bdf8);color:#fff;border-color:transparent}
+    .tab.on{background:linear-gradient(135deg,var(--emerald),#34d399);color:#fff;border-color:transparent;
+      box-shadow:0 4px 16px rgba(5,150,105,.35)}
+    .tab.on::after{display:none}
 
     /* PERIOD NAV */
     .period{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:28px}
     .period button{background:var(--card);border:1px solid var(--border);color:var(--t1);
-      width:36px;height:36px;border-radius:50%;font-size:1rem;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;transition:background .2s}
-    .period button:hover{background:#334155;border-color:var(--accent)}
-    .period span{font-size:1.05rem;font-weight:600;min-width:170px;text-align:center}
+      width:38px;height:38px;border-radius:50%;font-size:1rem;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .period button:hover{background:var(--emerald);border-color:var(--emerald);color:#fff;transform:scale(1.1)}
+    .period span{font-size:1.05rem;font-weight:700;min-width:170px;text-align:center;
+      background:linear-gradient(135deg,var(--t1),var(--gold-light));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
     /* 3-CARD GRID */
     .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
       gap:18px;max-width:1100px;margin:0 auto 28px}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;
-      padding:22px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
-    .card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.4)}
-    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0}
-    .card.c-sal::before{background:var(--green)}
-    .card.c-exp::before{background:var(--red)}
-    .card.c-sav::before{background:var(--indigo)}
-    .card-ico{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;
-      justify-content:center;font-size:1.3rem;margin-bottom:14px}
-    .card.c-sal .card-ico{background:rgba(16,185,129,.15)}
-    .card.c-exp .card-ico{background:rgba(239,68,68,.15)}
-    .card.c-sav .card-ico{background:rgba(99,102,241,.15)}
-    .card-lbl{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin-bottom:6px}
-    .card-amt{font-size:1.9rem;font-weight:700;letter-spacing:-.02em}
-    .card.c-sal .card-amt{color:var(--green)}
-    .card.c-exp .card-amt{color:var(--red)}
-    .card.c-sav .card-amt{color:var(--indigo)}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;
+      padding:24px;position:relative;overflow:hidden;transition:transform .25s,box-shadow .25s;
+      animation:slideInUp .5s ease both}
+    .card:nth-child(1){animation-delay:.05s}
+    .card:nth-child(2){animation-delay:.12s}
+    .card:nth-child(3){animation-delay:.19s}
+    .card:hover{transform:translateY(-6px);box-shadow:0 16px 40px rgba(0,0,0,.5)}
+    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:18px 18px 0 0}
+    .card::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+      background:linear-gradient(135deg,rgba(255,255,255,.03) 0%,transparent 60%);pointer-events:none}
+    .card.c-sal::before{background:linear-gradient(90deg,var(--emerald),#34d399)}
+    .card.c-sal{border-color:rgba(16,185,129,.2)}
+    .card.c-exp::before{background:linear-gradient(90deg,#ef4444,#f87171)}
+    .card.c-exp{border-color:rgba(239,68,68,.2)}
+    .card.c-sav::before{background:linear-gradient(90deg,var(--gold),var(--gold-light))}
+    .card.c-sav{border-color:rgba(212,160,23,.2)}
+    .card-ico{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;
+      justify-content:center;font-size:1.5rem;margin-bottom:16px}
+    .card.c-sal .card-ico{background:rgba(16,185,129,.15);animation:pulseGlow 3s ease-in-out infinite}
+    .card.c-exp .card-ico{background:rgba(239,68,68,.12)}
+    .card.c-sav .card-ico{background:rgba(212,160,23,.15);animation:pulseGold 3s ease-in-out infinite}
+    .card-lbl{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--t2);margin-bottom:8px}
+    .card-amt{font-size:2rem;font-weight:800;letter-spacing:-.03em}
+    .card.c-sal .card-amt{color:var(--emerald)}
+    .card.c-exp .card-amt{color:#f87171}
+    .card.c-sav .card-amt{color:var(--gold-light)}
     .card-sub{font-size:.78rem;color:var(--t2);margin-top:6px}
-    .save-badge{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:20px;
-      font-size:.72rem;font-weight:600;background:rgba(99,102,241,.15);color:#818cf8}
+    .save-badge{display:inline-block;margin-top:10px;padding:4px 12px;border-radius:20px;
+      font-size:.72rem;font-weight:700;background:rgba(212,160,23,.15);color:var(--gold-light);
+      border:1px solid rgba(212,160,23,.3)}
 
     /* CHART CARD */
-    .chart-card{background:var(--card);border:1px solid var(--border);border-radius:16px;
-      padding:22px;max-width:1100px;margin:0 auto 28px}
-    .chart-card h2{font-size:.85rem;font-weight:600;color:var(--t2);text-transform:uppercase;
-      letter-spacing:.06em;margin-bottom:18px}
+    .chart-card{background:var(--card);border:1px solid var(--border);border-radius:18px;
+      padding:22px;max-width:1100px;margin:0 auto 28px;
+      animation:slideInUp .5s ease .3s both}
+    .chart-card h2{font-size:.82rem;font-weight:700;color:var(--t2);text-transform:uppercase;
+      letter-spacing:.08em;margin-bottom:18px}
 
     /* YEAR TABLE */
     .tbl-card{background:var(--card);border:1px solid var(--border);border-radius:16px;
@@ -313,8 +358,13 @@
 
 <!-- HEADER -->
 <div class="hdr">
-  <h1>Niyamah</h1>
+  <div class="hdr-logo">
+    <span class="hdr-crescent">🌙</span>
+    <h1>Niyamah</h1>
+    <span class="hdr-star">✦</span>
+  </div>
   <p>Your personal finance companion</p>
+  <div class="hdr-tagline">نعمة &nbsp;·&nbsp; Blessing &nbsp;·&nbsp; Barakah</div>
 </div>
 
 <!-- TABS -->
@@ -338,19 +388,19 @@
   <!-- 3 Summary Cards -->
   <div class="cards">
     <div class="card c-sal">
-      <div class="card-ico">💵</div>
+      <div class="card-ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="13" rx="2" fill="#10b981" opacity=".2"/><rect x="2" y="6" width="20" height="13" rx="2" stroke="#10b981" stroke-width="1.5"/><path d="M2 10h20" stroke="#10b981" stroke-width="1.5"/><rect x="5" y="13" width="4" height="2.5" rx=".5" fill="#10b981"/><rect x="11" y="13" width="6" height="2.5" rx=".5" fill="#10b981" opacity=".5"/></svg></div>
       <div class="card-lbl" id="salLbl">Salary Credited</div>
       <div class="card-amt" id="salAmt">₹0</div>
       <div class="card-sub" id="salSub">Monthly take-home pay</div>
     </div>
     <div class="card c-exp">
-      <div class="card-ico">🧾</div>
+      <div class="card-ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="#f87171" stroke-width="1.5" fill="rgba(239,68,68,.15)"/><path d="M9 8h6M9 12h6M9 16h4" stroke="#f87171" stroke-width="1.5" stroke-linecap="round"/></svg></div>
       <div class="card-lbl" id="expLbl">Total Expenses</div>
       <div class="card-amt" id="expAmt">₹0</div>
       <div class="card-sub" id="expSub">Tap Expenses tab for breakdown</div>
     </div>
     <div class="card c-sav">
-      <div class="card-ico">🏦</div>
+      <div class="card-ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3C9 3 7 5.5 7 8c0 3 2 4.5 5 7 3-2.5 5-4 5-7 0-2.5-2-5-5-5z" fill="rgba(212,160,23,.2)" stroke="#f5c842" stroke-width="1.5"/><circle cx="12" cy="8" r="1.5" fill="#f5c842"/><path d="M8 19c0-1.1 1.8-2 4-2s4 .9 4 2" stroke="#f5c842" stroke-width="1.5" stroke-linecap="round"/></svg></div>
       <div class="card-lbl" id="savLbl">Savings</div>
       <div class="card-amt" id="savAmt">₹0</div>
       <div class="card-sub">Salary − Expenses</div>
@@ -464,7 +514,7 @@
   </div>
 
   <div class="proc-card" id="procCard" style="display:none">
-    <div class="spin"></div>
+    <div style="font-size:2.8rem;animation:crescentSpin 1.2s linear infinite;display:inline-block;margin-bottom:14px">🌙</div>
     <div class="proc-ttl" id="procTtl">Parsing...</div>
     <div class="proc-sub" id="procSub">Please wait</div>
   </div>
@@ -1024,6 +1074,56 @@ document.getElementById('btnInst').onclick=async()=>{document.getElementById('in
 document.getElementById('btnDis').onclick=()=>document.getElementById('instBanner').classList.remove('show');
 if(isIOS&&!isStandalone&&!sessionStorage.getItem('iosTip')){setTimeout(()=>{document.getElementById('iosTip').classList.add('show');sessionStorage.setItem('iosTip','1');},2000);}
 document.getElementById('iosTipX').onclick=()=>document.getElementById('iosTip').classList.remove('show');
+
+/* ═══════════════════════════════════════════════════
+   ANIMATIONS — counter, lock shake, drop pulse
+═══════════════════════════════════════════════════ */
+// Animate number counting up
+function countUp(el,target,duration=800){
+  const start=Date.now();const from=0;
+  const tick=()=>{
+    const p=Math.min(1,(Date.now()-start)/duration);
+    const val=Math.round(from+(target-from)*p);
+    el.textContent='₹'+val.toLocaleString('en-IN');
+    if(p<1)requestAnimationFrame(tick);
+    else el.textContent='₹'+Math.abs(target).toLocaleString('en-IN');
+  };
+  requestAnimationFrame(tick);
+}
+
+// Override renderHome to add counter animation
+const _origRenderHome=renderHome;
+function renderHomeAnimated(){
+  _origRenderHome();
+  const sal=parseInt(document.getElementById('salAmt').textContent.replace(/[₹,]/g,''))||0;
+  const exp=parseInt(document.getElementById('expAmt').textContent.replace(/[₹,]/g,''))||0;
+  const sav=parseInt(document.getElementById('savAmt').textContent.replace(/[₹,−]/g,''))||0;
+  setTimeout(()=>{countUp(document.getElementById('salAmt'),sal,700);},100);
+  setTimeout(()=>{countUp(document.getElementById('expAmt'),exp,700);},200);
+  setTimeout(()=>{countUp(document.getElementById('savAmt'),sav,700);},300);
+}
+// Replace renderHome with animated version
+window.renderHome=renderHomeAnimated;
+
+// Lock shake on pwd card show
+const _origShowProc=showProc;
+function showProcAnimated(t,s){
+  _origShowProc(t,s);
+}
+
+// Pulsing drop zone border
+const dropEl=document.getElementById('dropZone');
+if(dropEl){dropEl.style.animation='dropBorder 2.5s ease-in-out infinite';}
+
+// Lock shake when pwd card appears
+const pwdObserver=new MutationObserver(()=>{
+  const card=document.getElementById('pwdCard');
+  if(card&&card.style.display!=='none'){
+    const lock=card.querySelector('.pwd-lock');
+    if(lock){lock.style.animation='shake .5s ease';setTimeout(()=>{lock.style.animation='';},600);}
+  }
+});
+pwdObserver.observe(document.getElementById('pwdCard'),{attributes:true,attributeFilter:['style']});
 
 /* ═══════════════════════════════════════════════════
    INIT
