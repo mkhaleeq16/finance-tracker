@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monthly Finance Tracker</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Finance" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --salary-color: #10b981;
+      --expense-color: #ef4444;
+      --saving-color: #6366f1;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --accent: #38bdf8;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 24px 16px 80px;
+    }
+
+    /* ── Header ── */
+    .header { text-align: center; margin-bottom: 28px; }
+    .header h1 {
+      font-size: 2rem; font-weight: 700;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .header p { color: var(--text-secondary); margin-top: 6px; font-size: 0.95rem; }
+
+    /* ── View Toggle ── */
+    .view-toggle {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; margin-bottom: 24px;
+    }
+    .toggle-btn {
+      padding: 9px 28px; font-size: 0.9rem; font-weight: 600;
+      border: 1px solid var(--card-border); cursor: pointer;
+      background: var(--card-bg); color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+    .toggle-btn:first-child { border-radius: 99px 0 0 99px; border-right: none; }
+    .toggle-btn:last-child  { border-radius: 0 99px 99px 0; border-left: none; }
+    .toggle-btn.active {
+      background: linear-gradient(135deg, #6366f1, #38bdf8);
+      color: #fff; border-color: transparent;
+    }
+
+    /* ── Period Selector ── */
+    .period-selector {
+      display: flex; align-items: center; justify-content: center;
+      gap: 16px; margin-bottom: 32px;
+    }
+    .period-selector button {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      color: var(--text-primary); width: 38px; height: 38px;
+      border-radius: 50%; font-size: 1.1rem; cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .period-selector button:hover { background: #334155; border-color: var(--accent); }
+    .period-selector span {
+      font-size: 1.1rem; font-weight: 600; min-width: 180px;
+      text-align: center; color: var(--text-primary);
+    }
+
+    /* ── Summary Cards ── */
+    .summary-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px; max-width: 1100px; margin: 0 auto 36px;
+    }
+    .card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 16px; padding: 24px; position: relative;
+      overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 3px; border-radius: 16px 16px 0 0;
+    }
+    .card.salary::before  { background: var(--salary-color); }
+    .card.expense::before { background: var(--expense-color); }
+    .card.saving::before  { background: var(--saving-color); }
+
+    .card-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; margin-bottom: 16px;
+    }
+    .card.salary  .card-icon { background: rgba(16,185,129,0.15); }
+    .card.expense .card-icon { background: rgba(239,68,68,0.15); }
+    .card.saving  .card-icon { background: rgba(99,102,241,0.15); }
+
+    .card-label {
+      font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-secondary); margin-bottom: 8px;
+    }
+    .card-amount { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+    .card.salary  .card-amount { color: var(--salary-color); }
+    .card.expense .card-amount { color: var(--expense-color); }
+    .card.saving  .card-amount { color: var(--saving-color); }
+    .card-sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 8px; }
+    .saving-rate {
+      display: inline-block; margin-top: 10px; padding: 4px 10px;
+      border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+      background: rgba(99,102,241,0.15); color: #818cf8;
+    }
+
+    /* ── Year Badge ── */
+    .year-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(56,189,248,0.12); color: var(--accent);
+      border: 1px solid rgba(56,189,248,0.25);
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 0.78rem; font-weight: 600; margin-top: 10px;
+    }
+
+    /* ── Progress Bar ── */
+    .progress-section {
+      max-width: 1100px; margin: 0 auto 36px;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 16px; padding: 24px;
+    }
+    .progress-section h2 {
+      font-size: 1rem; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px;
+    }
+    .progress-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+    .progress-row:last-child { margin-bottom: 0; }
+    .progress-label { width: 90px; font-size: 0.85rem; color: var(--text-secondary); flex-shrink: 0; }
+    .progress-bar-wrap { flex: 1; height: 10px; background: #0f172a; border-radius: 99px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 99px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+    .fill-salary  { background: linear-gradient(90deg, #10b981, #34d399); }
+    .fill-expense { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .fill-saving  { background: linear-gradient(90deg, #6366f1, #818cf8); }
+    .progress-pct { width: 44px; text-align: right; font-size: 0.82rem; font-weight: 600; color: var(--text-primary); }
+
+    /* ── Bottom Grid ── */
+    .bottom-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 20px; max-width: 1100px; margin: 0 auto 36px;
+    }
+    @media (max-width: 700px) { .bottom-grid { grid-template-columns: 1fr; } }
+
+    /* ── Expense Breakdown ── */
+    .breakdown-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 16px; padding: 24px;
+    }
+    .breakdown-card h2 {
+      font-size: 1rem; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px;
+    }
+    .expense-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 8px; border-bottom: 1px solid #1e293b;
+      cursor: pointer; transition: background 0.15s; border-radius: 8px;
+    }
+    .expense-item:last-child { border-bottom: none; }
+    .expense-item:hover { background: rgba(255,255,255,0.03); }
+    .expense-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .expense-name { flex: 1; font-size: 0.9rem; color: var(--text-primary); }
+    .expense-amount { font-size: 0.9rem; font-weight: 600; color: var(--expense-color); }
+    .expense-pct { font-size: 0.78rem; color: var(--text-secondary); width: 38px; text-align: right; }
+
+    /* ── Donut Chart ── */
+    .chart-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 16px; padding: 24px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .chart-card h2 {
+      font-size: 1rem; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin-bottom: 20px; align-self: flex-start;
+    }
+    .chart-wrap { position: relative; width: 200px; height: 200px; }
+
+    /* ── Trend / Year Chart ── */
+    .trend-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 16px; padding: 24px;
+      max-width: 1100px; margin: 0 auto 36px;
+    }
+    .trend-card h2 {
+      font-size: 1rem; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px;
+    }
+
+    /* ── Year Monthly Table ── */
+    .year-table-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 16px; padding: 24px;
+      max-width: 1100px; margin: 0 auto 36px; overflow-x: auto;
+    }
+    .year-table-card h2 {
+      font-size: 1rem; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 560px; }
+    thead th {
+      font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-secondary);
+      padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--card-border);
+    }
+    tbody tr { transition: background 0.15s; }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    tbody td { padding: 11px 14px; font-size: 0.88rem; border-bottom: 1px solid rgba(51,65,85,0.5); }
+    tbody tr:last-child td { border-bottom: none; }
+    .td-month { color: var(--text-secondary); font-weight: 500; }
+    .td-salary  { color: var(--salary-color);  font-weight: 600; }
+    .td-expense { color: var(--expense-color); font-weight: 600; }
+    .td-saving  { color: var(--saving-color);  font-weight: 600; }
+    .td-pct { font-size: 0.78rem; color: var(--text-secondary); }
+    .no-data { color: var(--text-secondary); font-style: italic; font-size: 0.85rem; }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed; bottom: 28px; right: 28px;
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #38bdf8);
+      border: none; color: #fff; font-size: 1.5rem; cursor: pointer;
+      box-shadow: 0 8px 24px rgba(99,102,241,0.5);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.2s, box-shadow 0.2s; z-index: 100;
+    }
+    .fab:hover { transform: scale(1.1); box-shadow: 0 12px 32px rgba(99,102,241,0.6); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      z-index: 200; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 32px; width: 90%; max-width: 480px;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 24px; color: var(--text-primary); }
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      display: block; font-size: 0.82rem; font-weight: 600;
+      color: var(--text-secondary); text-transform: uppercase;
+      letter-spacing: 0.06em; margin-bottom: 8px;
+    }
+    .form-group input {
+      width: 100%; background: #0f172a; border: 1px solid var(--card-border);
+      border-radius: 10px; padding: 10px 14px; color: var(--text-primary);
+      font-size: 0.95rem; outline: none; transition: border-color 0.2s;
+    }
+    .form-group input:focus { border-color: var(--accent); }
+    .expense-inputs { display: flex; flex-direction: column; gap: 10px; }
+    .expense-input-row { display: flex; gap: 8px; align-items: center; }
+    .expense-input-row input:first-child { flex: 1.5; }
+    .expense-input-row input:last-child  { flex: 1; }
+    .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+    .btn {
+      flex: 1; padding: 12px; border-radius: 10px; border: none;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: linear-gradient(135deg, #6366f1, #38bdf8); color: #fff; }
+    .btn-secondary { background: #334155; color: var(--text-primary); }
+    .btn:hover { opacity: 0.9; }
+
+    /* ── Install Banner ── */
+    .install-banner {
+      display: none;
+      position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid #334155; border-radius: 16px;
+      padding: 14px 20px; z-index: 150;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      max-width: 360px; width: calc(100% - 32px);
+      animation: slideUp 0.3s ease;
+    }
+    .install-banner.show { display: flex; align-items: center; gap: 14px; }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    .install-banner-icon { font-size: 2rem; flex-shrink: 0; }
+    .install-banner-text { flex: 1; }
+    .install-banner-text strong { display: block; font-size: 0.9rem; color: var(--text-primary); margin-bottom: 2px; }
+    .install-banner-text span   { font-size: 0.78rem; color: var(--text-secondary); }
+    .install-banner-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .btn-install {
+      padding: 7px 14px; border-radius: 8px; border: none; cursor: pointer;
+      font-size: 0.8rem; font-weight: 600;
+      background: linear-gradient(135deg, #6366f1, #38bdf8); color: #fff;
+    }
+    .btn-dismiss {
+      padding: 5px 14px; border-radius: 8px; border: 1px solid #334155;
+      background: transparent; color: var(--text-secondary);
+      font-size: 0.78rem; cursor: pointer;
+    }
+
+    /* ── iOS Install Tip ── */
+    .ios-tip {
+      display: none;
+      position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; border: 1px solid #334155; border-radius: 16px;
+      padding: 16px 20px; z-index: 150;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      max-width: 340px; width: calc(100% - 32px);
+      text-align: center; animation: slideUp 0.3s ease;
+    }
+    .ios-tip.show { display: block; }
+    .ios-tip p { font-size: 0.85rem; color: var(--text-primary); line-height: 1.6; }
+    .ios-tip p span { color: var(--accent); font-weight: 600; }
+    .ios-tip-close {
+      margin-top: 12px; padding: 7px 20px; border-radius: 8px;
+      border: 1px solid #334155; background: transparent;
+      color: var(--text-secondary); font-size: 0.8rem; cursor: pointer;
+    }
+    /* Arrow pointing down */
+    .ios-tip::after {
+      content: ''; position: absolute; bottom: -10px; left: 50%;
+      transform: translateX(-50%);
+      border: 10px solid transparent; border-top-color: #334155;
+      border-bottom: none;
+    }
+
+    @media (max-width: 500px) {
+      .header h1 { font-size: 1.5rem; }
+      .card-amount { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>💰 Monthly Finance Tracker</h1>
+    <p>Track your salary, expenses &amp; savings at a glance</p>
+  </div>
+
+  <!-- View Toggle -->
+  <div class="view-toggle">
+    <button class="toggle-btn active" id="btnMonthly">📅 Monthly</button>
+    <button class="toggle-btn" id="btnYearly">📆 Yearly</button>
+  </div>
+
+  <!-- Period Selector -->
+  <div class="period-selector">
+    <button id="prevPeriod">&#8592;</button>
+    <span id="periodLabel"></span>
+    <button id="nextPeriod">&#8594;</button>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="summary-grid">
+    <div class="card salary">
+      <div class="card-icon">💵</div>
+      <div class="card-label" id="salaryLabel">Salary Credited</div>
+      <div class="card-amount" id="salaryDisplay">₹0</div>
+      <div class="card-sub" id="salarySub">Monthly take-home pay</div>
+    </div>
+    <div class="card expense">
+      <div class="card-icon">🧾</div>
+      <div class="card-label" id="expenseLabel">Total Expenses</div>
+      <div class="card-amount" id="expenseDisplay">₹0</div>
+      <div class="card-sub" id="expenseSubText">Across all categories</div>
+    </div>
+    <div class="card saving">
+      <div class="card-icon">🏦</div>
+      <div class="card-label" id="savingLabel">Monthly Savings</div>
+      <div class="card-amount" id="savingDisplay">₹0</div>
+      <div class="card-sub" id="savingSub">Salary − Expenses</div>
+      <span class="saving-rate" id="savingRate">0% saved</span>
+    </div>
+  </div>
+
+  <!-- Progress Bars -->
+  <div class="progress-section">
+    <h2 id="progressTitle">Budget Overview</h2>
+    <div class="progress-row">
+      <div class="progress-label">Salary</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill fill-salary" style="width:100%"></div>
+      </div>
+      <div class="progress-pct">100%</div>
+    </div>
+    <div class="progress-row">
+      <div class="progress-label">Expenses</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill fill-expense" id="expenseBar" style="width:0%"></div>
+      </div>
+      <div class="progress-pct" id="expensePct">0%</div>
+    </div>
+    <div class="progress-row">
+      <div class="progress-label">Savings</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill fill-saving" id="savingBar" style="width:0%"></div>
+      </div>
+      <div class="progress-pct" id="savingPct">0%</div>
+    </div>
+  </div>
+
+  <!-- Bottom Grid: Breakdown + Donut -->
+  <div class="bottom-grid">
+    <div class="breakdown-card">
+      <h2 id="breakdownTitle">Expense Breakdown</h2>
+      <div id="expenseList"></div>
+    </div>
+    <div class="chart-card">
+      <h2>Distribution</h2>
+      <div class="chart-wrap">
+        <canvas id="donutChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trend Chart -->
+  <div class="trend-card">
+    <h2 id="trendTitle">6-Month Trend</h2>
+    <canvas id="trendChart" height="100"></canvas>
+  </div>
+
+  <!-- Year Monthly Table (only in yearly view) -->
+  <div class="year-table-card" id="yearTableCard" style="display:none">
+    <h2>Month-by-Month Breakdown</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Salary</th>
+          <th>Expenses</th>
+          <th>Savings</th>
+          <th>Saved %</th>
+        </tr>
+      </thead>
+      <tbody id="yearTableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Install Banner (Android/Desktop) -->
+  <div class="install-banner" id="installBanner">
+    <div class="install-banner-icon">💰</div>
+    <div class="install-banner-text">
+      <strong>Install Finance Tracker</strong>
+      <span>Add to home screen for quick access</span>
+    </div>
+    <div class="install-banner-actions">
+      <button class="btn-install" id="btnInstall">Install</button>
+      <button class="btn-dismiss" id="btnDismiss">Later</button>
+    </div>
+  </div>
+
+  <!-- iOS Install Tip -->
+  <div class="ios-tip" id="iosTip">
+    <p>To install on iPhone:<br>
+      Tap <span>Share ⬆</span> in Safari, then<br>
+      tap <span>"Add to Home Screen"</span> 📲
+    </p>
+    <button class="ios-tip-close" id="iosTipClose">Got it</button>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" id="openModal" title="Edit Data">✏️</button>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3>✏️ Edit Monthly Data</h3>
+      <div class="form-group">
+        <label>Monthly Salary (₹)</label>
+        <input type="number" id="inputSalary" placeholder="e.g. 75000" />
+      </div>
+      <div class="form-group">
+        <label>Expense Categories</label>
+        <div class="expense-inputs" id="expenseInputs"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="closeModal">Cancel</button>
+        <button class="btn btn-primary" id="saveData">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ═══════════════════════════════════════
+       CONSTANTS
+    ═══════════════════════════════════════ */
+    const MONTHS = [
+      'January','February','March','April','May','June',
+      'July','August','September','October','November','December'
+    ];
+    const EXPENSE_COLORS = [
+      '#f59e0b','#ef4444','#8b5cf6','#06b6d4',
+      '#ec4899','#10b981','#f97316','#3b82f6'
+    ];
+    const DEFAULT_CATEGORIES = [
+      'Rent','Groceries','Transport','Utilities',
+      'Entertainment','Healthcare','Dining Out','Others'
+    ];
+
+    /* ═══════════════════════════════════════
+       STATE
+    ═══════════════════════════════════════ */
+    const today = new Date();
+    let currentYear  = today.getFullYear();
+    let currentMonth = today.getMonth();
+    let viewMode = 'monthly'; // 'monthly' | 'yearly'
+
+    const monthData = {};
+
+    /* ═══════════════════════════════════════
+       SEED DATA  (full year + prev months)
+    ═══════════════════════════════════════ */
+    function seedMonth(year, month, salary, expArr) {
+      if (!monthData[year]) monthData[year] = {};
+      monthData[year][month] = {
+        salary,
+        expenses: expArr.map((a, i) => ({ name: DEFAULT_CATEGORIES[i], amount: a }))
+      };
+    }
+
+    // Seed all 12 months of current year
+    const yearSeed = [
+      [85000,[22000,8200,4000,3000,2500,1400,3000,1500]],  // Jan
+      [85000,[22000,8600,4100,3100,2700,1600,3300,1300]],  // Feb
+      [85000,[22000,8400,4200,3000,2900,1500,3100,1400]],  // Mar
+      [88000,[22000,8900,4300,3200,3200,1700,3500,1600]],  // Apr
+      [90000,[22000,8500,4200,3100,2800,1500,3200,1700]],  // May
+      [90000,[22000,9100,4500,3300,3500,2000,4100,1200]],  // Jun
+      [90000,[22000,8800,4300,3200,2600,1800,3600,1400]],  // Jul
+      [92000,[22000,9500,4600,3400,4200,1200,4500,1800]],  // Aug
+      [92000,[22000,8700,4100,3000,3100,2200,3900,1600]],  // Sep
+      [92000,[22000,9200,4400,3100,3800,1600,4200,1500]],  // Oct
+      [95000,[22000,9400,4500,3200,3600,1800,4300,1700]],  // Nov
+      [95000,[22000,9800,4700,3400,4500,2000,4800,2100]],  // Dec
+    ];
+    yearSeed.forEach(([sal, exp], m) => {
+      seedMonth(currentYear, m, sal, exp);
+    });
+
+    // Also seed previous year (same data slightly lower)
+    yearSeed.forEach(([sal, exp], m) => {
+      seedMonth(currentYear - 1, m, Math.round(sal * 0.88),
+        exp.map(v => Math.round(v * 0.92)));
+    });
+
+    /* ═══════════════════════════════════════
+       LOCALSTORAGE PERSISTENCE
+    ═══════════════════════════════════════ */
+    const STORAGE_KEY = 'financeTrackerData_v1';
+
+    function saveToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(monthData));
+      } catch(e) {}
+    }
+
+    function loadFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          // Merge saved data into monthData (saved data overrides seed data)
+          Object.keys(saved).forEach(year => {
+            if (!monthData[year]) monthData[year] = {};
+            Object.keys(saved[year]).forEach(month => {
+              monthData[year][month] = saved[year][month];
+            });
+          });
+        }
+      } catch(e) {}
+    }
+
+    /* ═══════════════════════════════════════
+       HELPERS
+    ═══════════════════════════════════════ */
+    const fmt = n => '₹' + Math.abs(n).toLocaleString('en-IN');
+
+    function getMonthData(year, month) {
+      return monthData[year]?.[month] || {
+        salary: 0,
+        expenses: DEFAULT_CATEGORIES.map(name => ({ name, amount: 0 }))
+      };
+    }
+
+    function totalExpenses(data) {
+      return data.expenses.reduce((s, e) => s + (e.amount || 0), 0);
+    }
+
+    // Aggregate all 12 months of a year
+    function getYearSummary(year) {
+      let totalSalary = 0, totalExp = 0;
+      const catTotals = DEFAULT_CATEGORIES.map((name, i) => ({ name, amount: 0, colorIdx: i }));
+      const monthRows = [];
+
+      for (let m = 0; m < 12; m++) {
+        const d   = getMonthData(year, m);
+        const exp = totalExpenses(d);
+        totalSalary += d.salary;
+        totalExp    += exp;
+        d.expenses.forEach((e, i) => { catTotals[i].amount += (e.amount || 0); });
+        monthRows.push({ month: m, salary: d.salary, expenses: exp, saving: d.salary - exp });
+      }
+
+      return {
+        salary:   totalSalary,
+        expenses: totalExp,
+        saving:   totalSalary - totalExp,
+        catTotals,
+        monthRows
+      };
+    }
+
+    /* ═══════════════════════════════════════
+       CHARTS
+    ═══════════════════════════════════════ */
+    let donutChart, trendChart;
+
+    function initCharts() {
+      const dCtx = document.getElementById('donutChart').getContext('2d');
+      donutChart = new Chart(dCtx, {
+        type: 'doughnut',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: EXPENSE_COLORS, borderWidth: 0, hoverOffset: 8 }] },
+        options: {
+          cutout: '70%',
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)}` } }
+          },
+          animation: { animateRotate: true, duration: 800 }
+        }
+      });
+
+      const tCtx = document.getElementById('trendChart').getContext('2d');
+      trendChart = new Chart(tCtx, {
+        type: 'bar',
+        data: {
+          labels: [],
+          datasets: [
+            { label: 'Salary',   data: [], backgroundColor: 'rgba(16,185,129,0.75)', borderRadius: 6 },
+            { label: 'Expenses', data: [], backgroundColor: 'rgba(239,68,68,0.75)',  borderRadius: 6 },
+            { label: 'Savings',  data: [], backgroundColor: 'rgba(99,102,241,0.75)', borderRadius: 6 },
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: '#94a3b8', font: { size: 12 } } },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` } }
+          },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: {
+              ticks: { color: '#94a3b8', callback: v => '₹' + (v/1000).toFixed(0) + 'k' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            }
+          }
+        }
+      });
+    }
+
+    function updateDonut(expenses) {
+      const active = expenses.filter(e => e.amount > 0);
+      donutChart.data.labels = active.map(e => e.name);
+      donutChart.data.datasets[0].data = active.map(e => e.amount);
+      donutChart.data.datasets[0].backgroundColor =
+        active.map((_, i) => EXPENSE_COLORS[i % EXPENSE_COLORS.length]);
+      donutChart.update();
+    }
+
+    function updateTrendMonthly() {
+      const labels = [], salaries = [], expenses = [], savings = [];
+      for (let i = 5; i >= 0; i--) {
+        const d    = new Date(currentYear, currentMonth - i, 1);
+        const data = getMonthData(d.getFullYear(), d.getMonth());
+        const exp  = totalExpenses(data);
+        labels.push(MONTHS[d.getMonth()].slice(0, 3));
+        salaries.push(data.salary);
+        expenses.push(exp);
+        savings.push(Math.max(0, data.salary - exp));
+      }
+      trendChart.data.labels = labels;
+      trendChart.data.datasets[0].data = salaries;
+      trendChart.data.datasets[1].data = expenses;
+      trendChart.data.datasets[2].data = savings;
+      trendChart.update();
+      document.getElementById('trendTitle').textContent = '6-Month Trend';
+    }
+
+    function updateTrendYearly(year) {
+      const labels = MONTHS.map(m => m.slice(0, 3));
+      const salaries = [], expenses = [], savings = [];
+      for (let m = 0; m < 12; m++) {
+        const d   = getMonthData(year, m);
+        const exp = totalExpenses(d);
+        salaries.push(d.salary);
+        expenses.push(exp);
+        savings.push(Math.max(0, d.salary - exp));
+      }
+      trendChart.data.labels = labels;
+      trendChart.data.datasets[0].data = salaries;
+      trendChart.data.datasets[1].data = expenses;
+      trendChart.data.datasets[2].data = savings;
+      trendChart.update();
+      document.getElementById('trendTitle').textContent = `${year} — Monthly Breakdown`;
+    }
+
+    /* ═══════════════════════════════════════
+       RENDER MONTHLY
+    ═══════════════════════════════════════ */
+    function renderMonthly() {
+      const data     = getMonthData(currentYear, currentMonth);
+      const salary   = data.salary;
+      const expTotal = totalExpenses(data);
+      const saving   = salary - expTotal;
+      const savePct  = salary > 0 ? Math.round((saving / salary) * 100) : 0;
+      const expPct   = salary > 0 ? Math.min(100, Math.round((expTotal / salary) * 100)) : 0;
+
+      document.getElementById('periodLabel').textContent = `${MONTHS[currentMonth]} ${currentYear}`;
+
+      // Card labels
+      document.getElementById('salaryLabel').textContent  = 'Salary Credited';
+      document.getElementById('expenseLabel').textContent = 'Total Expenses';
+      document.getElementById('savingLabel').textContent  = 'Monthly Savings';
+      document.getElementById('salarySub').textContent    = 'Monthly take-home pay';
+      document.getElementById('savingSub').textContent    = 'Salary − Expenses';
+
+      document.getElementById('salaryDisplay').textContent  = fmt(salary);
+      document.getElementById('expenseDisplay').textContent = fmt(expTotal);
+      document.getElementById('savingDisplay').textContent  = (saving < 0 ? '−' : '') + fmt(saving);
+      document.getElementById('savingRate').textContent     = `${Math.max(0, savePct)}% saved`;
+      document.getElementById('expenseSubText').textContent =
+        `${data.expenses.filter(e => e.amount > 0).length} active categories`;
+
+      document.getElementById('progressTitle').textContent  = 'Budget Overview';
+      document.getElementById('expenseBar').style.width     = expPct + '%';
+      document.getElementById('savingBar').style.width      = Math.max(0, savePct) + '%';
+      document.getElementById('expensePct').textContent     = expPct + '%';
+      document.getElementById('savingPct').textContent      = Math.max(0, savePct) + '%';
+
+      document.getElementById('breakdownTitle').textContent = 'Expense Breakdown';
+      renderExpenseList(data.expenses, expTotal);
+      updateDonut(data.expenses);
+      updateTrendMonthly();
+
+      document.getElementById('yearTableCard').style.display = 'none';
+    }
+
+    /* ═══════════════════════════════════════
+       RENDER YEARLY
+    ═══════════════════════════════════════ */
+    function renderYearly() {
+      const ys      = getYearSummary(currentYear);
+      const salary  = ys.salary;
+      const expTotal = ys.expenses;
+      const saving  = ys.saving;
+      const savePct = salary > 0 ? Math.round((saving / salary) * 100) : 0;
+      const expPct  = salary > 0 ? Math.min(100, Math.round((expTotal / salary) * 100)) : 0;
+
+      document.getElementById('periodLabel').textContent = `Year ${currentYear}`;
+
+      // Card labels
+      document.getElementById('salaryLabel').textContent  = 'Annual Salary';
+      document.getElementById('expenseLabel').textContent = 'Annual Expenses';
+      document.getElementById('savingLabel').textContent  = 'Annual Savings';
+      document.getElementById('salarySub').textContent    = 'Total salary for the year';
+      document.getElementById('savingSub').textContent    = 'Salary − Expenses';
+
+      document.getElementById('salaryDisplay').textContent  = fmt(salary);
+      document.getElementById('expenseDisplay').textContent = fmt(expTotal);
+      document.getElementById('savingDisplay').textContent  = (saving < 0 ? '−' : '') + fmt(saving);
+      document.getElementById('savingRate').textContent     = `${Math.max(0, savePct)}% saved`;
+      document.getElementById('expenseSubText').textContent =
+        `${ys.catTotals.filter(e => e.amount > 0).length} categories`;
+
+      document.getElementById('progressTitle').textContent = `${currentYear} Annual Budget`;
+      document.getElementById('expenseBar').style.width    = expPct + '%';
+      document.getElementById('savingBar').style.width     = Math.max(0, savePct) + '%';
+      document.getElementById('expensePct').textContent    = expPct + '%';
+      document.getElementById('savingPct').textContent     = Math.max(0, savePct) + '%';
+
+      document.getElementById('breakdownTitle').textContent = 'Annual Expense Breakdown';
+      renderExpenseList(ys.catTotals, expTotal);
+      updateDonut(ys.catTotals);
+      updateTrendYearly(currentYear);
+
+      // Year table
+      document.getElementById('yearTableCard').style.display = 'block';
+      const tbody = document.getElementById('yearTableBody');
+      tbody.innerHTML = '';
+      ys.monthRows.forEach(row => {
+        const sp = row.salary > 0 ? Math.round((row.saving / row.salary) * 100) : 0;
+        const hasData = row.salary > 0;
+        tbody.innerHTML += `
+          <tr>
+            <td class="td-month">${MONTHS[row.month]}</td>
+            <td class="${hasData ? 'td-salary' : 'no-data'}">${hasData ? fmt(row.salary) : '—'}</td>
+            <td class="${hasData ? 'td-expense' : 'no-data'}">${hasData ? fmt(row.expenses) : '—'}</td>
+            <td class="${hasData ? 'td-saving' : 'no-data'}">${hasData ? (row.saving < 0 ? '−' : '') + fmt(row.saving) : '—'}</td>
+            <td class="td-pct">${hasData ? Math.max(0, sp) + '%' : '—'}</td>
+          </tr>`;
+      });
+    }
+
+    /* ═══════════════════════════════════════
+       SHARED EXPENSE LIST
+    ═══════════════════════════════════════ */
+    function renderExpenseList(expenses, expTotal) {
+      const list = document.getElementById('expenseList');
+      list.innerHTML = '';
+      expenses.forEach((e, i) => {
+        if (!e.amount) return;
+        const pct = expTotal > 0 ? Math.round((e.amount / expTotal) * 100) : 0;
+        list.innerHTML += `
+          <div class="expense-item">
+            <div class="expense-dot" style="background:${EXPENSE_COLORS[i % EXPENSE_COLORS.length]}"></div>
+            <div class="expense-name">${e.name}</div>
+            <div class="expense-amount">${fmt(e.amount)}</div>
+            <div class="expense-pct">${pct}%</div>
+          </div>`;
+      });
+    }
+
+    /* ═══════════════════════════════════════
+       MASTER RENDER
+    ═══════════════════════════════════════ */
+    function render() {
+      if (viewMode === 'monthly') renderMonthly();
+      else renderYearly();
+    }
+
+    /* ═══════════════════════════════════════
+       VIEW TOGGLE
+    ═══════════════════════════════════════ */
+    document.getElementById('btnMonthly').addEventListener('click', () => {
+      viewMode = 'monthly';
+      document.getElementById('btnMonthly').classList.add('active');
+      document.getElementById('btnYearly').classList.remove('active');
+      render();
+    });
+
+    document.getElementById('btnYearly').addEventListener('click', () => {
+      viewMode = 'yearly';
+      document.getElementById('btnYearly').classList.add('active');
+      document.getElementById('btnMonthly').classList.remove('active');
+      render();
+    });
+
+    /* ═══════════════════════════════════════
+       PERIOD NAV
+    ═══════════════════════════════════════ */
+    document.getElementById('prevPeriod').addEventListener('click', () => {
+      if (viewMode === 'monthly') {
+        currentMonth--;
+        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+      } else {
+        currentYear--;
+      }
+      render();
+    });
+
+    document.getElementById('nextPeriod').addEventListener('click', () => {
+      if (viewMode === 'monthly') {
+        currentMonth++;
+        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+      } else {
+        currentYear++;
+      }
+      render();
+    });
+
+    /* ═══════════════════════════════════════
+       MODAL (monthly edit only)
+    ═══════════════════════════════════════ */
+    function buildModalInputs() {
+      const data = getMonthData(currentYear, currentMonth);
+      document.getElementById('inputSalary').value = data.salary || '';
+      const container = document.getElementById('expenseInputs');
+      container.innerHTML = '';
+      data.expenses.forEach((e, i) => {
+        container.innerHTML += `
+          <div class="expense-input-row">
+            <input type="text"   id="eName${i}"   value="${e.name}"   placeholder="Category" />
+            <input type="number" id="eAmount${i}" value="${e.amount || ''}" placeholder="Amount" />
+          </div>`;
+      });
+    }
+
+    document.getElementById('openModal').addEventListener('click', () => {
+      // In yearly mode, switch to monthly first so user edits a specific month
+      if (viewMode === 'yearly') {
+        viewMode = 'monthly';
+        document.getElementById('btnMonthly').classList.add('active');
+        document.getElementById('btnYearly').classList.remove('active');
+        render();
+      }
+      buildModalInputs();
+      document.getElementById('modalOverlay').classList.add('open');
+    });
+
+    document.getElementById('closeModal').addEventListener('click', () => {
+      document.getElementById('modalOverlay').classList.remove('open');
+    });
+
+    document.getElementById('modalOverlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('modalOverlay'))
+        document.getElementById('modalOverlay').classList.remove('open');
+    });
+
+    document.getElementById('saveData').addEventListener('click', () => {
+      const salary = parseFloat(document.getElementById('inputSalary').value) || 0;
+      const expenses = [];
+      const data = getMonthData(currentYear, currentMonth);
+      data.expenses.forEach((_, i) => {
+        const name   = document.getElementById(`eName${i}`)?.value || DEFAULT_CATEGORIES[i];
+        const amount = parseFloat(document.getElementById(`eAmount${i}`)?.value) || 0;
+        expenses.push({ name, amount });
+      });
+      if (!monthData[currentYear]) monthData[currentYear] = {};
+      monthData[currentYear][currentMonth] = { salary, expenses };
+      saveToStorage();
+      document.getElementById('modalOverlay').classList.remove('open');
+      render();
+    });
+
+    /* ═══════════════════════════════════════
+       PWA — Service Worker + Install
+    ═══════════════════════════════════════ */
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    // Detect iOS
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone;
+
+    // Android/Desktop install prompt
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (!isInStandaloneMode) {
+        document.getElementById('installBanner').classList.add('show');
+      }
+    });
+
+    document.getElementById('btnInstall').addEventListener('click', async () => {
+      document.getElementById('installBanner').classList.remove('show');
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+      }
+    });
+
+    document.getElementById('btnDismiss').addEventListener('click', () => {
+      document.getElementById('installBanner').classList.remove('show');
+    });
+
+    // iOS tip — show once
+    if (isIOS && !isInStandaloneMode && !sessionStorage.getItem('iosTipShown')) {
+      setTimeout(() => {
+        document.getElementById('iosTip').classList.add('show');
+        sessionStorage.setItem('iosTipShown', '1');
+      }, 2000);
+    }
+
+    document.getElementById('iosTipClose').addEventListener('click', () => {
+      document.getElementById('iosTip').classList.remove('show');
+    });
+
+    /* ═══════════════════════════════════════
+       INIT
+    ═══════════════════════════════════════ */
+    initCharts();
+    loadFromStorage(); // load saved data before first render
+    render();
+  </script>
+</body>
+</html>
